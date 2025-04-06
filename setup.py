@@ -7,7 +7,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="sql_pydb",
-    version="0.1.0",
+    version="0.2.0",
     packages=find_packages(),
     description='A Python package for simplified SQL operations across MSSQL, PostgreSQL, MySQL, and SQLite.',
     url='https://github.com/dwarakhnv/SQLPy',
