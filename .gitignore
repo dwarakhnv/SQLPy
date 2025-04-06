@@ -1,1 +1,4 @@
 __pycache__
+dist
+build
+sql_pydb.egg-info

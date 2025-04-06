@@ -2,10 +2,10 @@ import os
 import sys
 import pandas as pd
 
-from SQLPy.Database import Database
-from SQLPy.Column import Column
-from SQLPy.Cell import clean_value_with_type, infer_sql_type_from_value, determine_final_type
-from SQLPy.TableCommands import TableCommands
+from sql_pydb.Database import Database
+from sql_pydb.Column import Column
+from sql_pydb.Cell import clean_value_with_type, infer_sql_type_from_value, determine_final_type
+from sql_pydb.TableCommands import TableCommands
 
 
 class TableActions(Database):

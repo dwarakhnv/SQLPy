@@ -6,23 +6,21 @@ with open("README.md", "r") as f:
 
 
 setup(
-    name="SQLPy",
+    name="sql_pydb",
     version="0.1.0",
     packages=find_packages(),
-    # author="SQLPy",
-    # author_email="SQLPy",
-    # description="SQLPy",
-    url='https://github.com/yourusername/SQLPy',  # Replace with your actual GitHub repo
+    description='A Python package for simplified SQL operations across MSSQL, PostgreSQL, MySQL, and SQLite.',
+    url='https://github.com/dwarakhnv/SQLPy',
     install_requires=[
-        'pandas==2.2.3',
-        'numpy==2.2.4',
-        'pyodbc==5.2.0',
-        'python-dateutil>=2.8.2'
+        'pandas>=1.3.0',         
+        'numpy>=1.21.0',         
+        'pyodbc>=4.0.30',        
+        'python-dateutil>=2.8.1',
     ],
     entry_points={
         "console_scripts": [
             # CLI Command = Module:Function
-            # "sqlpy = SQLPy.__main__:main",
+            # "sqlpydb = SQLPy.__main__:main",
         ],
     },
     long_description=long_description,
@@ -30,3 +28,7 @@ setup(
     python_requires='>=3.8',
 )
 
+# Commands:
+# python setup.py sdist bdist_wheel             - Create Distribution
+# pip install FILE_PATH.whl --force-reinstall   - Install for testing environment
+# twine upload dist/*                           - Upload to PyPI PIP
