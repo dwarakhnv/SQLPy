@@ -50,21 +50,40 @@ class Column():
             self.SIZE = 255     # Default value
         if self.SIZE and self.DATA_TYPE not in ["VARCHAR", "NVARCHAR"]:
             self.SIZE = None    # No size for INT, FLOAT, DATE, etc
+        if self.SIZE:
+            if type(self.SIZE) == float:
+                self.SIZE = int(self.SIZE)
+            if type(self.SIZE) == str:
+                try:
+                    # If a "," is present, leave it be for DOUBLE(10,2)
+                    if "." in self.SIZE:
+                        self.SIZE = float(self.SIZE)
+                    self.SIZE = int(self.SIZE)
+                except:
+                    pass        
     
     def get_create_column_line(self):
         if self.PRIMARY_STR:
-            statement = "\t{column_name} {column_type_and_size} {self.PRIMARY_STR}".format(
+            # Example: "    column_name VARCHAR(255) PRIMARY KEY"
+            # Example: "    column_name VARCHAR(255) AUTO_INCREMENT PRIMARY KEY"
+            statement = "\t{column_name} {column_type_and_size} {primary_str}".format(
                 column_name          = self.COLUMN,
-                column_type_and_size = f"{self.DATA_TYPE}({self.SIZE})" if self.SIZE else self.DATA_TYPE
+                column_type_and_size = f"{self.DATA_TYPE}({self.SIZE})" if self.SIZE else self.DATA_TYPE,
+                primary_str          = self.PRIMARY_STR,
             )
             return statement
+        # Example: "    column_name VARCHAR(255)"
+        # Example: "    column_name FLOAT"
         statement = "\t{column_name} {column_type_and_size}".format(
             column_name          = self.COLUMN,
-            column_type_and_size = f"{self.DATA_TYPE}({self.SIZE})" if self.SIZE else self.DATA_TYPE
+            column_type_and_size = f"{self.DATA_TYPE}({self.SIZE})" if self.SIZE else self.DATA_TYPE,
         )
         return statement
 
     def get_sql_type(self):
+        """
+        Returns VARCHAR(SIZE) or FLOAT or DOUBLE(SIZE)=DOUBLE(10,3)
+        """
         return f"{self.DATA_TYPE}({self.SIZE})" if self.SIZE else self.DATA_TYPE
 
     def __str__(self):

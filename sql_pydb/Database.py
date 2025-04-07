@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import subprocess
 import pandas as pd
 import pyodbc
@@ -24,7 +25,9 @@ class Database():
     def __init__(self, database:str=None, server:str=None, username:str=None, password:str=None, 
                  driver:str=None, host:str=None, port:int=None, sqlite_path:str=None,
                  db_type:DatabaseType=None,
-                 connection_string:str=None, use_active_connection:bool=False, ignore:bool=False):
+                 connection_string:str=None, use_active_connection:bool=False, ignore:bool=False,
+                 log_level=logging.INFO,
+                 *args, **kwargs):
         """
         Args:
             database (str, optional): Database name. 
@@ -39,6 +42,8 @@ class Database():
             use_active_connection (bool, optional): Use active connection. Defaults to False.
             ignore (bool, optional): True to ignore asserts. Defaults to False.
         """
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._setup_logger(log_level)
         self.DATABASE = database
         self.SERVER   = server
         self.USERNAME = username
@@ -53,6 +58,19 @@ class Database():
         self.use_active_connection  = use_active_connection
         self._connection_string     = connection_string if connection_string else self.get_connection_string()
         self.connection             = self._open_connection() if self.use_active_connection else None
+
+      
+    def _setup_logger(self, log_level):
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('[%(levelname)s] %(name)s - %(message)s')
+        handler.setFormatter(formatter)
+
+        # Avoid duplicate logs if root logger already has handlers
+        if not self.logger.hasHandlers():
+            self.logger.addHandler(handler)
+
+        self.logger.setLevel(log_level)
+        self.logger.propagate = False  # Don't bubble to root logger
 
 
     def get_connection_string(self):
@@ -114,9 +132,10 @@ class Database():
             elif self.DB_TYPE == DatabaseType.SQLITE:
                 self.connection = sqlite3.connect(self.SQLITE_PATH)
 
-            print(f"Opened DB connection")
+            self.logger.info(f"Opened DB connection")
 
         except Exception as e:
+            self.logger.error(f"Failed to open DB connection: {e}")
             return None
         return self.connection
 
@@ -137,7 +156,7 @@ class Database():
             elif self.DB_TYPE == DatabaseType.SQLITE:
                 self.connection.close()
             
-            print(f"Closed DB connection")
+            self.logger.info(f"Closed DB connection")
             self.connection = None
     
     def _is_connection_open(self):
@@ -150,7 +169,7 @@ class Database():
     def run_query(self, query):
         conn = self._open_connection()
         if conn is None:
-            print("Failed to open connection")
+            self.logger.error("Failed to open connection")
             return pd.DataFrame()
 
         query_output_df = pd.read_sql_query(query, conn)
@@ -176,9 +195,7 @@ class Database():
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            print("SQL command failed!")
-            print("Return code:", e.returncode)
-            print("Error output:\n", e.stderr)
+            self.logger.error(f"SQLCMD Error (code {e.returncode}): {e.stderr.strip()}")
             raise RuntimeError(f"SQLCMD Error (code {e.returncode}): {e.stderr.strip()}")
 
     def run_transaction(self, commands:list[str]):
@@ -186,7 +203,7 @@ class Database():
         status = False
         connection = self._open_connection()
         if connection is None:
-            print("Failed to open connection")
+            self.logger.error("Failed to open connection")
             return False
         cursor = connection.cursor()
         try:
@@ -203,7 +220,7 @@ class Database():
 
         except Exception as e:
             # Rollback the transaction in case of an error
-            print(f"Error: {e}")
+            self.logger.error(f"Error: {e}")
             connection.rollback()
 
         finally:
@@ -229,7 +246,7 @@ class Database():
                 return self._create_sqlite_database()
 
         except Exception as e:
-            print(f"Error creating database: {e}")
+            self.logger.error(f"Error creating database: {e}")
             return False
         
         return False
@@ -242,7 +259,7 @@ class Database():
                 cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{self.DATABASE}') CREATE DATABASE [{self.DATABASE}];")
                 return True
         except Exception as e:
-            print(f"Error creating MSSQL database: {e}")
+            self.logger.error(f"Error creating MSSQL database: {e}")
             return False
 
     def _create_postgresql_database(self):
@@ -256,7 +273,7 @@ class Database():
                     cursor.execute(f"CREATE DATABASE {self.DATABASE};")
                 return True
         except Exception as e:
-            print(f"Error creating PostgreSQL database: {e}")
+            self.logger.error(f"Error creating PostgreSQL database: {e}")
             return False
 
     def _create_mysql_database(self):
@@ -267,7 +284,7 @@ class Database():
                 cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{self.DATABASE}`;")
                 return True
         except Exception as e:
-            print(f"Error creating MySQL database: {e}")
+            self.logger.error(f"Error creating MySQL database: {e}")
             return False
 
     def _create_sqlite_database(self):
@@ -276,7 +293,7 @@ class Database():
             conn.close()
             return True
         except Exception as e:
-            print(f"Error creating SQLite database: {e}")
+            self.logger.error(f"Error creating SQLite database: {e}")
             return False
 
 

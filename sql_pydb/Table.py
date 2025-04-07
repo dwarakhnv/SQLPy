@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+import logging
 
 from sql_pydb.Database import Database
 from sql_pydb.Column import Column
@@ -11,8 +12,8 @@ from sql_pydb.TableCommands import TableCommands
 
 class TableActions(Database):
     
-    def __init__(self, database, table_name, *args, **kwargs):
-        super().__init__(database, *args, **kwargs)
+    def __init__(self, database:str, table_name:str, log_level=logging.INFO, *args, **kwargs):
+        super().__init__(database, log_level=log_level, *args, **kwargs)
         self.DATABASE   = database
         self.TABLE      = table_name
         self.user_schema= {
@@ -26,6 +27,21 @@ class TableActions(Database):
         }
         self.get_db_table_schema()  # TODO: Should we have this here?
         self.NULL_ITEMS = [None, np.nan, pd.NaT]    # Additional Types: "#N/A", 'NA'
+        
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._setup_logger(log_level)
+      
+    def _setup_logger(self, log_level):
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('[%(levelname)s] %(name)s - %(message)s')
+        handler.setFormatter(formatter)
+
+        # Avoid duplicate logs if root logger already has handlers
+        if not self.logger.hasHandlers():
+            self.logger.addHandler(handler)
+
+        self.logger.setLevel(log_level)
+        self.logger.propagate = False  # Don't bubble to root logger
 
 
     def schema_df_to_objects(self, df):
@@ -156,7 +172,7 @@ class TableActions(Database):
         3. DELETE any old columns that the source does not have. (FOR ETL PROCESSES)
         """
         if len(self.db_table_column_schema_df) == 0:
-            print(f"NEED TO CREATE TABLE\n\n")
+            self.logger.warning(f"Need to create table {self.DATABASE}.{self.TABLE}")
             command = self.generate_create_table_sql()
             self.run_transaction([command])
             return
@@ -179,7 +195,7 @@ class TableActions(Database):
         for column, column_obj in self.user_schema.items():
             if self.db_schema.get(column) and column_obj != self.db_schema.get(column):
                 columns_to_update.append(column_obj)
-                # print("UPDATE", column, column_obj)
+                self.logger.info(f"""UPDATE Column {self.DATABASE}.{self.TABLE}.{column} to {column_obj.DATA_TYPE} SIZE({column_obj.SIZE})""")
 
         status = True
         for column_obj in columns_to_update:
@@ -187,13 +203,13 @@ class TableActions(Database):
             query = self.generate_column_try_cast_sql(column_name=column_obj.COLUMN, column_type=column_obj.DATA_TYPE)
             df = self.run_query(query)
             if len(df) > 0:
-                print(f"ERROR: TRY CAST '{column_obj.COLUMN}' to {column_obj.DATA_TYPE}. Failed try cast rows: ", df)
+                self.logger.warning(f"WARNING: TRY CAST Column '{column_obj.COLUMN}' to {column_obj.DATA_TYPE} SIZE({column_obj.SIZE}). Failed try cast rows: \n{df}")
                 status = status & False
                 continue
             command = self.generate_modify_column_type_sql(column_name=column_obj.COLUMN, column_type=column_obj.get_sql_type())
             status_temp = self.run_transaction([command])
             if not status_temp:
-                print("ERROR UDPATE -", command)
+                self.logger.error(f"ERROR: UPDATE Column '{column_obj.COLUMN}' to {column_obj.DATA_TYPE} SIZE({column_obj.SIZE}) | {command}")
             status = status & status_temp
         return status
 
@@ -202,7 +218,7 @@ class TableActions(Database):
         for column, column_obj in self.user_schema.items():
             if column not in self.db_schema.keys():
                 new_columns.append(column_obj)
-                # print("ADD", column, column_obj)
+                self.logger.info(f"""ADD Column {self.DATABASE}.{self.TABLE}.{column} as {column_obj.DATA_TYPE} SIZE({column_obj.SIZE})""")
         commands = []
         for column_obj in new_columns:
             commands.append(
@@ -212,7 +228,7 @@ class TableActions(Database):
         status = self.run_transaction(commands)
         if not status:
             for command in commands:
-                print("ERROR ADD COLUMN -", command)
+                self.logger.error(f"ERROR: ADD Column | {command}")
         return status
 
     def delete_old_columns(self):
@@ -220,7 +236,7 @@ class TableActions(Database):
         for column, db_column_obj in self.db_schema.items():
             if column not in self.user_schema.keys():
                 columns_to_delete.append(db_column_obj)
-                # print("DELETE", column, db_column_obj)
+                self.logger.info(f"""DELETE Column {self.DATABASE}.{self.TABLE}.{column}""")
         commands = []
         for db_column_obj in columns_to_delete:
             commands.append(
@@ -229,7 +245,7 @@ class TableActions(Database):
         status = self.run_transaction(commands)
         if not status:
             for command in commands:
-                print("ERROR DELETE COLUMN -", command)
+                self.logger.error(f"ERROR: DELETE Column | {command}")
         return status
 
     def does_table_exist(self, database:str=None, table_name:str=None):

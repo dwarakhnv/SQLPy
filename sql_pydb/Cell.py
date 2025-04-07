@@ -25,9 +25,9 @@ def get_item_bool_version(item):
     if str(item).upper() == "TRUE":     return True
     if str(item).upper() == "FALSE":    return False
     if str(item).upper() == "1":        return True
-    if str(item).upper() == "0":        return True
+    if str(item).upper() == "0":        return False
     if str(item).upper() == "1.0":      return True
-    if str(item).upper() == "0.0":      return True
+    if str(item).upper() == "0.0":      return False
     return None
 
 def infer_sql_type_from_value(value:str):
@@ -82,16 +82,25 @@ def clean_value_with_type(value, column_type:str="VARCHAR", null_items:list[obje
 
     if is_item_null(value, null_items):
         return f"NULL"
+    
+    if value == "":
+        return f"NULL"
 
     if column_type in ["NVARCHAR", "VARCHAR"]:
+        if value == "":
+            return f"NULL"
         value = str(value).replace("'", "''")
         return f"'{value}'"
 
     if column_type in ["FLOAT", "INTEGER"]:
         value = str(value).replace(",", "").replace("'", "").replace('"', "")
+        if value == "":
+            return f"NULL"
         return f"{value}"
                 
     if column_type in ["DATETIME", "DATE"]:
+        if value == "":
+            return f"NULL"
         return f"'{value}'"
         
     if column_type == "BOOLEAN":
