@@ -13,6 +13,23 @@ def is_item_null(item, null_items=[None, np.nan, pd.NaT]):
     if pd.isna(item):       return True
     return False
 
+def get_item_bool_version(item):
+    """ Provides either True, False, or None """
+    if is_item_null(item):  return None
+    if item == True:        return True
+    if item == False:       return False
+    if item == 1:           return True
+    if item == 0:           return False
+    if item == 1.0:         return True
+    if item == 0.0:         return False
+    if str(item).upper() == "TRUE":     return True
+    if str(item).upper() == "FALSE":    return False
+    if str(item).upper() == "1":        return True
+    if str(item).upper() == "0":        return True
+    if str(item).upper() == "1.0":      return True
+    if str(item).upper() == "0.0":      return True
+    return None
+
 def infer_sql_type_from_value(value:str):
     if value == "":     return "EMPTY"
     if value == None:   return "EMPTY"
@@ -22,15 +39,15 @@ def infer_sql_type_from_value(value:str):
     # Regular expressions for different data types
     int_regex           = re.compile(r'^-?\d+$')
     int_comma_regex     = re.compile(r'^-?\d+(,\d+)+$')
-    double_regex        = re.compile(r'^-?\d*\.\d+$')
-    double_comma_regex  = re.compile(r'^-?\d+(,\d+)+\.\d+$')
+    float_regex         = re.compile(r'^-?\d*\.\d+$')
+    float_comma_regex   = re.compile(r'^-?\d+(,\d+)+\.\d+$')
     bool_regex          = re.compile(r'^(True|False|true|false)$')
 
     # Check for each data type
     if int_regex.match(value):              return "INTEGER"
     elif int_comma_regex.match(value):      return "INTEGER"
-    elif double_regex.match(value):         return "DOUBLE"
-    elif double_comma_regex.match(value):   return "DOUBLE"
+    elif float_regex.match(value):          return "FLOAT"
+    elif float_comma_regex.match(value):    return "FLOAT"
     elif bool_regex.match(value):           return "BOOLEAN"
 
     try:
@@ -55,7 +72,7 @@ def determine_final_type(types:list[str], column_name:str=None):
     if "VARCHAR" in types:  return "VARCHAR"
     if "DATETIME" in types: return "DATETIME"
     if "DATE" in types:     return "DATE"
-    if "DOUBLE" in types:   return "DOUBLE"
+    if "FLOAT" in types:    return "FLOAT"
     if "INTEGER" in types:  return "INTEGER"
     if "BOOLEAN" in types:  return "BOOLEAN"
     return "VARCHAR"  # Default if no types are identified
@@ -70,7 +87,7 @@ def clean_value_with_type(value, column_type:str="VARCHAR", null_items:list[obje
         value = str(value).replace("'", "''")
         return f"'{value}'"
 
-    if column_type in ["DOUBLE", "INTEGER"]:
+    if column_type in ["FLOAT", "INTEGER"]:
         value = str(value).replace(",", "").replace("'", "").replace('"', "")
         return f"{value}"
                 
@@ -78,10 +95,9 @@ def clean_value_with_type(value, column_type:str="VARCHAR", null_items:list[obje
         return f"'{value}'"
         
     if column_type == "BOOLEAN":
-        if value == True or str(value).upper() == "TRUE":
-            return f"TRUE"
-        if value == False or str(value).upper() == "FALSE":
-            return f"FALSE"
+        value_bool = get_item_bool_version(value)
+        if value_bool == True:  return f"1"
+        if value_bool == False: return f"0"
     
     return f"NULL"
 

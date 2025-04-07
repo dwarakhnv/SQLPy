@@ -4,7 +4,7 @@
 class Column():
 
     """
-    Support for VARCHAR, NVARCHAR, INT, DOUBLE, DATE, DATETIME, BOOLEAN
+    Support for VARCHAR, NVARCHAR, INT, FLOAT, DATE, DATETIME, BOOLEAN
     
     Support coming for the following types:
         id INTEGER AUTO_INCREMENT PRIMARY KEY,
@@ -13,7 +13,6 @@ class Column():
         mediumint_col MEDIUMINT,
         bigint_col BIGINT,
         decimal_col DECIMAL(10,2),
-        float_col FLOAT,
         bit_col BIT(1),
         char_col CHAR(10),
         varchar_col VARCHAR(255),
@@ -45,8 +44,8 @@ class Column():
     def cleanup(self):
         if self.DATA_TYPE == "INT":     # Rename to full name
             self.DATA_TYPE = "INTEGER"
-        if self.DATA_TYPE == "FLOAT":   # Rename to FLOAT
-            self.DATA_TYPE = "DOUBLE"
+        if self.DATA_TYPE == "DOUBLE":  # Rename to FLOAT
+            self.DATA_TYPE = "FLOAT"
         if not self.SIZE and self.DATA_TYPE in ["VARCHAR", "NVARCHAR"]:
             self.SIZE = 255     # Default value
         if self.SIZE and self.DATA_TYPE not in ["VARCHAR", "NVARCHAR"]:
