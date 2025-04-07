@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import numpy as np
 
 from sql_pydb.Database import Database
 from sql_pydb.Column import Column
@@ -24,10 +25,10 @@ class TableActions(Database):
             # ...
         }
         self.get_db_table_schema()  # TODO: Should we have this here?
+        self.NULL_ITEMS = [None, np.nan, pd.NaT]    # Additional Types: "#N/A", 'NA'
 
 
     def schema_df_to_objects(self, df):
-
         if isinstance(df, list):
             return df
         if not isinstance(df, pd.DataFrame):
@@ -62,6 +63,7 @@ class TableActions(Database):
         user_schema_records = self.schema_df_to_objects(user_schema_records)
 
         self.get_db_table_schema()
+        self.user_schema = {}
 
         for column in list(df.columns):
             # 1: Use user defined Schema first
@@ -339,7 +341,9 @@ class TableActions(Database):
             return ""
         
         if column_name and column_value:
-            column_value = clean_value_with_type(column_value, column_type=self.user_schema[column_name].DATA_TYPE)
+            column_value = clean_value_with_type(column_value, 
+                                                 column_type=self.user_schema[column_name].DATA_TYPE, 
+                                                 null_items=self.NULL_ITEMS)
             statement = w_statement.format(
                 database_table_combined = f"{database}.dbo.{table_name}" if database else table_name,
                 column_name             = column_name,
@@ -374,7 +378,7 @@ class TableActions(Database):
         dataframe = dataframe
         database    = database   if database   else self.DATABASE
         table_name  = table_name if table_name else self.TABLE
-        statement   = "INSERT INTO {database_table_combined} (\n{columns}\n) VALUES\n {every_row_values}; \n"
+        statement   = "INSERT INTO {database_table_combined} ({columns}) VALUES\n {every_row_values}; \n"
 
         columns_str_list    = ', '.join(dataframe.columns)
         row_values_str_list = self._get_row_values(dataframe)
@@ -394,7 +398,9 @@ class TableActions(Database):
         for index, row in dataframe.iterrows():
             clean_values = []
             for column_name in list(dataframe.columns):
-                clean_values.append(clean_value_with_type(row[column_name], column_type=self.user_schema[column_name].DATA_TYPE))
+                clean_values.append(clean_value_with_type(row[column_name], 
+                                                          column_type=self.user_schema[column_name].DATA_TYPE, 
+                                                          null_items=self.NULL_ITEMS))
             values = ', '.join(clean_values)
             row_values_str_list.append(f"({values})")
         return row_values_str_list

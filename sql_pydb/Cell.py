@@ -1,15 +1,22 @@
 import os
 import sys
+import re
 import pandas as pd
 import numpy as np
-import re
 from dateutil.parser import parse as date_parse
 
+def is_item_null(item, null_items=[None, np.nan, pd.NaT]):
+    if item is pd.NaT:      return True
+    if item in null_items:  return True
+    if type(item) == float:
+        if np.isnan(item):  return True
+    if pd.isna(item):       return True
+    return False
 
 def infer_sql_type_from_value(value:str):
     if value == "":     return "EMPTY"
     if value == None:   return "EMPTY"
-    if value == np.nan: return "EMPTY"
+    if value is np.nan: return "EMPTY"
     if value is pd.NaT: return "EMPTY"
 
     # Regular expressions for different data types
@@ -48,17 +55,15 @@ def determine_final_type(types:list[str], column_name:str=None):
     if "VARCHAR" in types:  return "VARCHAR"
     if "DATETIME" in types: return "DATETIME"
     if "DATE" in types:     return "DATE"
-    if "DOUBLE" in types:    return "DOUBLE"
+    if "DOUBLE" in types:   return "DOUBLE"
     if "INTEGER" in types:  return "INTEGER"
     if "BOOLEAN" in types:  return "BOOLEAN"
     return "VARCHAR"  # Default if no types are identified
 
-def clean_value_with_type(value, column_type:str="VARCHAR", pd_np_nulls:list[object]=[None, np.nan, pd.NaT, "NULL", "None", "nan", "NaN"]):
+def clean_value_with_type(value, column_type:str="VARCHAR", null_items:list[object]=[None, np.nan, pd.NaT]):
     # Returns values with the quotes also for easy insert use
 
-    if value in pd_np_nulls:
-        return f"NULL"
-    if value is pd.NaT: 
+    if is_item_null(value, null_items):
         return f"NULL"
 
     if column_type in ["NVARCHAR", "VARCHAR"]:
