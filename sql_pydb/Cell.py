@@ -97,12 +97,12 @@ def clean_value_with_type(value, column_type:str="VARCHAR", null_items:list[obje
         if value == "":
             return f"NULL"
         return f"{value}"
-                
-    if column_type in ["DATETIME", "DATE"]:
+
+    if column_type in ["DATETIME", "DATETIME2", "DATE", "TIME", "SMALLDATETIME"]:
         if value == "":
             return f"NULL"
         return f"'{value}'"
-        
+
     if column_type == "BOOLEAN":
         value_bool = get_item_bool_version(value)
         if value_bool == True:  return f"1"

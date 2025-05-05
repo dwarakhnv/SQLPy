@@ -126,3 +126,7 @@ assert status == True
 ### Support:
 - If you have a question or need additional support, please create an issue ticket on [SQLPy](https://github.com/dwarakhnv/SQLPy) GitHub Repo. 
 
+
+### Additional:
+- PyPI link: [sql-pydb](https://pypi.org/project/sql-pydb/)
+- GitHub Link: [sql-pydb](https://github.com/dwarakhnv/SQLPy) 
